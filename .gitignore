@@ -1,0 +1,22 @@
+# Java build outputs
+/bin/
+/out/
+*.class
+*.jar
+
+# Packaged submissions / archives
+*.zip
+*.tar.gz
+
+# IDE / editor files
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+
+# Local agent/config artifacts
+.claude/
+.hermes/
+.specify/
