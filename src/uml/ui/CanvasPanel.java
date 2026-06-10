@@ -44,9 +44,19 @@ import uml.tool.ToolMode;
  */
 public class CanvasPanel extends JPanel {
 
+    /**
+     * Observer used by ToolBar to keep button highlighting synchronized with
+     * programmatic tool changes (for example when RectMode/OvalMode revert to
+     * the previous persistent tool after mouse release).
+     */
+    public interface ToolChangeListener {
+        void toolChanged(ToolMode mode);
+    }
+
     private final DiagramModel model;
     private ToolMode activeMode;
     private ToolMode previousMode;
+    private ToolChangeListener toolChangeListener;
 
     // ── Transient overlay state ───────────────────────────────────────────────
 
@@ -104,6 +114,21 @@ public class CanvasPanel extends JPanel {
             previousMode = activeMode;
         }
         activeMode = mode;
+        if (toolChangeListener != null) {
+            toolChangeListener.toolChanged(activeMode);
+        }
+    }
+
+    /**
+     * Register a listener for active-tool changes.
+     *
+     * CanvasPanel remains the owner of the active ToolMode, while ToolBar uses
+     * this callback only for view synchronization.  This keeps transient-mode
+     * reversion centralized in CanvasPanel and prevents RectMode/OvalMode from
+     * knowing anything about toolbar buttons.
+     */
+    public void setToolChangeListener(ToolChangeListener listener) {
+        this.toolChangeListener = listener;
     }
 
     /** Return the last non-transient tool that was active before the current one. */

@@ -32,6 +32,9 @@ make compile
 # Run from compiled classes
 java -cp bin uml.app.Main
 
+# Run the smoke tests
+make test
+
 # Or build and run the jar
 make run
 ```

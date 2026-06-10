@@ -53,7 +53,6 @@ public class ToolBar extends JPanel {
             JToggleButton btn = new JToggleButton(LABELS[i]);
             btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, btn.getPreferredSize().height));
             btn.addActionListener(e -> {
-                highlightButton(btn);
                 canvas.setActiveTool(modes[idx]);
             });
             group.add(btn);
@@ -61,9 +60,13 @@ public class ToolBar extends JPanel {
             buttons[i] = btn;
         }
 
+        // Keep visual button state synchronized with CanvasPanel's active tool.
+        // This also covers programmatic changes, especially transient Rect/Oval
+        // modes reverting to the previous persistent mode after object creation.
+        canvas.setToolChangeListener(this::highlightMode);
+
         // Select is highlighted and active at startup
         buttons[0].setSelected(true);
-        highlightButton(buttons[0]);
         canvas.setActiveTool(modes[0]);
     }
 
@@ -76,6 +79,17 @@ public class ToolBar extends JPanel {
         }
         active.setBackground(Color.DARK_GRAY);
         active.setForeground(Color.WHITE);
+        active.setSelected(true);
+    }
+
+    /** Highlight the button whose mode instance is currently active. */
+    private void highlightMode(ToolMode activeMode) {
+        for (int i = 0; i < modes.length; i++) {
+            if (modes[i] == activeMode) {
+                highlightButton(buttons[i]);
+                return;
+            }
+        }
     }
 
     // ── Concrete mode factory (Phase 3 / T021) ───────────────────────────────

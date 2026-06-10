@@ -1,6 +1,7 @@
 # Java build outputs
 /bin/
 /out/
+/test-bin/
 *.class
 *.jar
 
