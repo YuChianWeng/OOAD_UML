@@ -39,6 +39,8 @@ make test
 make run
 ```
 
+The final code-aligned class diagram is available in `docs/final-class-diagram/` as PlantUML source, SVG, and PNG.
+
 Requires JDK 17+. No third-party libraries are needed.
 
 ---

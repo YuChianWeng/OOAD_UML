@@ -1,0 +1,364 @@
+@startuml
+' OOAD Final Project
+' UML Editor — Final Class Diagram aligned with current Java source and official spec
+' Source repo: /home/ubuntu/OOAD/OOAD_UML/src
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam nodesep 60
+skinparam ranksep 70
+hide empty members
+
+title UML Editor Final Class Diagram — Code-Aligned Version
+
+package "uml.app" {
+  class Main {
+    +main(args: String[]): void
+  }
+}
+
+package "uml.model" {
+  abstract class GraphicObject {
+    +draw(g: Graphics2D): void
+    +contains(p: Point): boolean
+    +getBoundingBox(): Rectangle
+    +getLabel(): String
+    +getLabelColor(): Color
+  }
+
+  abstract class BasicObject {
+    #x: int
+    #y: int
+    #width: int
+    #height: int
+    #label: String
+    #labelColor: Color
+    +getBoundingBox(): Rectangle
+    +contains(p: Point): boolean
+    +getLabel(): String
+    +getLabelColor(): Color
+    +setLabel(label: String): void
+    +setLabelColor(color: Color): void
+    +moveTo(newX: int, newY: int): void
+    +resize(r: Rectangle): void
+    +getPorts(): List<Point>
+  }
+
+  class RectObject {
+    +RectObject(r: Rectangle)
+    +draw(g: Graphics2D): void
+    +getPorts(): List<Point>
+  }
+
+  class OvalObject {
+    +OvalObject(r: Rectangle)
+    +draw(g: Graphics2D): void
+    +getPorts(): List<Point>
+  }
+
+  class CompositeObject {
+    -children: List<GraphicObject>
+    +CompositeObject(children: List<GraphicObject>)
+    +getBoundingBox(): Rectangle
+    +contains(p: Point): boolean
+    +draw(g: Graphics2D): void
+    +getLabel(): String
+    +getLabelColor(): Color
+    +moveTo(newX: int, newY: int): void
+    ~moveBy(dx: int, dy: int): void
+    +getChildren(): List<GraphicObject>
+  }
+
+  class Link {
+    -type: LinkType
+    -source: BasicObject
+    -sourcePortIndex: int
+    -target: BasicObject
+    -targetPortIndex: int
+    +Link(type: LinkType, source: BasicObject, sourcePortIndex: int, target: BasicObject, targetPortIndex: int)
+    +getType(): LinkType
+    +getSource(): BasicObject
+    +getSourcePortIndex(): int
+    +getTarget(): BasicObject
+    +getTargetPortIndex(): int
+    +draw(g: Graphics2D): void
+    -drawOpenArrow(g: Graphics2D, tip: Point, ux: double, uy: double, px: double, py: double): void
+    -drawHollowTriangle(g: Graphics2D, tip: Point, ux: double, uy: double, px: double, py: double): void
+    -drawFilledDiamond(g: Graphics2D, base: Point, ux: double, uy: double, px: double, py: double): void
+  }
+
+  enum LinkType {
+    ASSOCIATION
+    GENERALIZATION
+    COMPOSITION
+  }
+
+  class DiagramModel {
+    -objects: List<GraphicObject>
+    -links: List<Link>
+    +addObject(obj: GraphicObject): void
+    +removeObject(obj: GraphicObject): void
+    +getObjects(): List<GraphicObject>
+    +moveToFront(obj: GraphicObject): void
+    +getObjectAt(p: Point): GraphicObject
+    +getBasicObjectAt(p: Point): BasicObject
+    +addLink(link: Link): void
+    +removeLink(link: Link): void
+    +getLinks(): List<Link>
+    +getObjectsCompletelyInside(r: Rectangle): List<GraphicObject>
+    +group(selected: List<GraphicObject>): CompositeObject
+    +ungroup(composite: CompositeObject): List<GraphicObject>
+  }
+}
+
+package "uml.tool" {
+  interface ToolMode {
+    +onMousePressed(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseDragged(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseReleased(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseMoved(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +isTransient(): boolean
+  }
+
+  class SelectMode {
+    -state: State
+    -resizeTarget: BasicObject
+    -resizeAnchorPoint: Point
+    -resizeInitialBounds: Rectangle
+    -resizeFreeY: boolean
+    -resizeFreeX: boolean
+    -moveTarget: GraphicObject
+    -moveOffset: Point
+    -dragStart: Point
+    -selection: List<GraphicObject>
+    +onMousePressed(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseDragged(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseReleased(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseMoved(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+  }
+
+  enum "SelectMode.State" as SelectModeState {
+    IDLE
+    MOVING
+    RESIZING
+    DRAG_SELECTING
+  }
+
+  class RectMode {
+    -pressPoint: Point
+    +onMousePressed(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseDragged(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseReleased(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseMoved(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +isTransient(): boolean
+  }
+
+  class OvalMode {
+    -pressPoint: Point
+    +onMousePressed(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseDragged(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseReleased(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseMoved(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +isTransient(): boolean
+  }
+
+  abstract class AbstractLinkMode {
+    -state: State
+    -source: BasicObject
+    -sourcePortIndex: int
+    #getLinkType(): LinkType
+    +onMousePressed(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseDragged(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseReleased(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    +onMouseMoved(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+  }
+
+  enum "AbstractLinkMode.State" as AbstractLinkModeState {
+    IDLE
+    DRAWING
+    INVALID
+  }
+
+  class AssociationMode {
+    #getLinkType(): LinkType
+  }
+
+  class GeneralizationMode {
+    #getLinkType(): LinkType
+  }
+
+  class CompositionMode {
+    #getLinkType(): LinkType
+  }
+}
+
+package "uml.ui" {
+  class MainFrame {
+    ~model: DiagramModel
+    ~canvas: CanvasPanel
+    ~toolBar: ToolBar
+    +MainFrame()
+    -buildMenuBar(): JMenuBar
+    -onGroup(): void
+    -onUngroup(): void
+    -onLabel(): void
+    -namedItem(name: String, action: Runnable): JMenuItem
+  }
+
+  class CanvasPanel {
+    -model: DiagramModel
+    -activeMode: ToolMode
+    -previousMode: ToolMode
+    -toolChangeListener: ToolChangeListener
+    -previewBounds: Rectangle
+    -previewIsOval: boolean
+    -hoveredObject: GraphicObject
+    -selection: List<GraphicObject>
+    -linkPreviewStart: Point
+    -linkPreviewEnd: Point
+    -dragRect: Rectangle
+    +CanvasPanel(model: DiagramModel)
+    +setActiveTool(mode: ToolMode): void
+    +setToolChangeListener(listener: ToolChangeListener): void
+    +getPreviousMode(): ToolMode
+    +setHoveredObject(obj: GraphicObject): void
+    +setSelection(newSelection: List<GraphicObject>): void
+    +getSelection(): List<GraphicObject>
+    +getHoveredObject(): GraphicObject
+    +setPreviewBounds(bounds: Rectangle, isOval: boolean): void
+    +clearPreviewBounds(): void
+    +setLinkPreview(start: Point, end: Point): void
+    +clearLinkPreview(): void
+    +setDragRect(rect: Rectangle): void
+    +clearDragRect(): void
+    #paintComponent(g: Graphics): void
+    -drawIndicators(g: Graphics2D, obj: GraphicObject): void
+  }
+
+  interface "CanvasPanel.ToolChangeListener" as ToolChangeListener {
+    +toolChanged(mode: ToolMode): void
+  }
+
+  class ToolBar {
+    ~modes: ToolMode[]
+    -buttons: JToggleButton[]
+    +ToolBar(canvas: CanvasPanel)
+    -highlightButton(active: JToggleButton): void
+    -highlightMode(activeMode: ToolMode): void
+    -buildStubModes(): ToolMode[]
+  }
+
+  class LabelDialog {
+    -nameField: JTextField
+    -chosenColor: Color
+    -colorSwatch: JPanel
+    -confirmed: boolean
+    +LabelDialog(owner: Frame, initialName: String, initialColor: Color)
+    +isConfirmed(): boolean
+    +getLabelName(): String
+    +getLabelColor(): Color
+  }
+}
+
+package "uml.util" {
+  class GeomUtils <<utility>> {
+    -GeomUtils()
+    +nearestPortIndex(ports: List<Point>, p: Point): int
+    +union(a: Rectangle, b: Rectangle): Rectangle
+    +normalizeRect(p1: Point, p2: Point): Rectangle
+  }
+
+  class PortUtils <<utility>> {
+    -PortUtils()
+    +computeRectPorts(bbox: Rectangle): List<Point>
+    +computeOvalPorts(bbox: Rectangle): List<Point>
+  }
+}
+
+' Inheritance / interface realization
+GraphicObject <|-- BasicObject
+GraphicObject <|-- CompositeObject
+BasicObject <|-- RectObject
+BasicObject <|-- OvalObject
+
+ToolMode <|.. SelectMode
+ToolMode <|.. RectMode
+ToolMode <|.. OvalMode
+ToolMode <|.. AbstractLinkMode
+AbstractLinkMode <|-- AssociationMode
+AbstractLinkMode <|-- GeneralizationMode
+AbstractLinkMode <|-- CompositionMode
+
+' Inner state enums
+SelectMode --> SelectModeState : state
+AbstractLinkMode --> AbstractLinkModeState : state
+
+' Application composition
+Main ..> MainFrame : creates on EDT
+MainFrame *-- DiagramModel : owns
+MainFrame *-- CanvasPanel : owns
+MainFrame *-- ToolBar : owns
+MainFrame ..> LabelDialog : opens
+
+' Model ownership and relationships
+DiagramModel *-- "0..*" GraphicObject : objects
+DiagramModel *-- "0..*" Link : links
+CompositeObject *-- "1..*" GraphicObject : children
+Link --> LinkType : type
+Link --> BasicObject : source
+Link --> BasicObject : target
+Link ..> PortUtils : endpoints via getPorts()
+
+' View / controller collaboration
+CanvasPanel --> DiagramModel : renders model
+CanvasPanel --> ToolMode : delegates mouse events
+CanvasPanel o-- "0..*" GraphicObject : selection
+CanvasPanel --> ToolChangeListener : notifies active tool
+ToolBar --> CanvasPanel : setActiveTool()
+ToolBar o-- ToolMode : modes
+ToolBar o-- JToggleButton : buttons
+ToolBar ..> ToolChangeListener : registers listener
+
+' Tool dependencies / creation
+RectMode ..> RectObject : creates
+OvalMode ..> OvalObject : creates
+RectMode ..> DiagramModel : addObject()
+OvalMode ..> DiagramModel : addObject()
+RectMode ..> CanvasPanel : preview / revert
+OvalMode ..> CanvasPanel : preview / revert
+SelectMode ..> DiagramModel : select / move / group
+SelectMode ..> CanvasPanel : hover / selection / dragRect
+SelectMode ..> GeomUtils : normalize / ports
+AbstractLinkMode ..> DiagramModel : getBasicObjectAt() / addLink()
+AbstractLinkMode ..> Link : creates
+AbstractLinkMode ..> CanvasPanel : link preview
+AbstractLinkMode ..> GeomUtils : nearestPortIndex()
+AssociationMode ..> LinkType : ASSOCIATION
+GeneralizationMode ..> LinkType : GENERALIZATION
+CompositionMode ..> LinkType : COMPOSITION
+
+' Utility usage
+RectObject ..> PortUtils : computeRectPorts()
+OvalObject ..> PortUtils : computeOvalPorts()
+CompositeObject ..> GeomUtils : union()
+
+note right of Link
+  Link is intentionally NOT a GraphicObject.
+  It is managed separately by DiagramModel.links,
+  matching the official spec/data-model.
+
+  Endpoints are lazy-updated:
+  source/target BasicObject + port index
+  -> getPorts() on each draw().
+end note
+
+note bottom of ToolBar
+  ToolBar uses Swing JToggleButton directly.
+  CanvasPanel owns activeMode; ToolBar only
+  synchronizes visual highlight through
+  ToolChangeListener for transient Rect/Oval revert.
+end note
+
+@enduml
