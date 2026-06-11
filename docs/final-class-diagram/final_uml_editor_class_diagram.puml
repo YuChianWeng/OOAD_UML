@@ -29,6 +29,7 @@ package "uml.model" {
   }
 
   abstract class BasicObject {
+    +MIN_SIZE: int
     #x: int
     #y: int
     #width: int
@@ -131,12 +132,15 @@ package "uml.tool" {
     -resizeFreeX: boolean
     -moveTarget: GraphicObject
     -moveOffset: Point
+    -moveTargets: List<GraphicObject>
+    -lastMovePoint: Point
     -dragStart: Point
     -selection: List<GraphicObject>
     +onMousePressed(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
     +onMouseDragged(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
     +onMouseReleased(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
     +onMouseMoved(e: MouseEvent, model: DiagramModel, canvas: CanvasPanel): void
+    -moveObjectBy(obj: GraphicObject, dx: int, dy: int): void
   }
 
   enum "SelectMode.State" as SelectModeState {
@@ -268,6 +272,9 @@ package "uml.util" {
     +nearestPortIndex(ports: List<Point>, p: Point): int
     +union(a: Rectangle, b: Rectangle): Rectangle
     +normalizeRect(p1: Point, p2: Point): Rectangle
+    +anchoredResizeBounds(anchor: Point, cursor: Point, minWidth: int, minHeight: int): Rectangle
+    +anchoredHorizontalResizeBounds(anchorX: int, cursorX: int, fixedY: int, fixedHeight: int, minWidth: int): Rectangle
+    +anchoredVerticalResizeBounds(anchorY: int, cursorY: int, fixedX: int, fixedWidth: int, minHeight: int): Rectangle
   }
 
   class PortUtils <<utility>> {
@@ -330,7 +337,7 @@ RectMode ..> CanvasPanel : preview / revert
 OvalMode ..> CanvasPanel : preview / revert
 SelectMode ..> DiagramModel : select / move / group
 SelectMode ..> CanvasPanel : hover / selection / dragRect
-SelectMode ..> GeomUtils : normalize / ports
+SelectMode ..> GeomUtils : normalize / anchored resize / ports
 AbstractLinkMode ..> DiagramModel : getBasicObjectAt() / addLink()
 AbstractLinkMode ..> Link : creates
 AbstractLinkMode ..> CanvasPanel : link preview

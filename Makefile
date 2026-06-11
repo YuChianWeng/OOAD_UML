@@ -8,7 +8,7 @@ MAIN_CLASS = uml.app.Main
 # Collect every .java file under src/ and test/
 SOURCES = $(shell find $(SRC_DIR) -name "*.java")
 TEST_SOURCES = $(shell find $(TEST_DIR) -name "*.java" 2>/dev/null)
-TEST_CLASSES = ModelSmokeTest uml.ui.ToolbarTransientModeTest
+TEST_CLASSES = ModelSmokeTest uml.ui.ToolbarTransientModeTest uml.ui.SelectModeMultiMoveTest uml.ui.ResizeAnchorClampTest
 
 .PHONY: all compile test jar run clean
 

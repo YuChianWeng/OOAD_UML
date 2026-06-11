@@ -99,6 +99,19 @@ public class SelectMode implements ToolMode {
      */
     private Point moveOffset;
 
+    /**
+     * Objects that should move during the current drag gesture.
+     *
+     * TA clarification for the final demo: dragging any object that is already
+     * part of a multi-selection is a batch move, not a re-selection.  Therefore
+     * we freeze the movement target list at mouse-press time and move every
+     * selected object by the same cursor delta during the drag.
+     */
+    private final List<GraphicObject> moveTargets = new ArrayList<>();
+
+    /** Last cursor position seen during a move gesture; used to compute deltas. */
+    private Point lastMovePoint;
+
     // ── Drag-select gesture fields (T041) ─────────────────────────────────────
 
     /**
@@ -176,17 +189,29 @@ public class SelectMode implements ToolMode {
         // ── Branch 2: OBJECT HIT → move (FR-023 priority 2) ──────────────────
         GraphicObject hit = model.getObjectAt(e.getPoint());
         if (hit != null) {
-            model.moveToFront(hit);
+            boolean hitAlreadySelected = selection.contains(hit);
 
-            selection.clear();
-            selection.add(hit);
-            canvas.setSelection(Collections.unmodifiableList(selection));
+            if (!hitAlreadySelected) {
+                model.moveToFront(hit);
+                selection.clear();
+                selection.add(hit);
+                canvas.setSelection(Collections.unmodifiableList(selection));
+            }
 
             moveTarget = hit;
             moveOffset = new Point(
                 e.getX() - hit.getBoundingBox().x,
                 e.getY() - hit.getBoundingBox().y
             );
+
+            moveTargets.clear();
+            if (hitAlreadySelected) {
+                moveTargets.addAll(selection);
+            } else {
+                moveTargets.add(hit);
+            }
+            lastMovePoint = e.getPoint();
+
             state = State.MOVING;
             canvas.repaint();
             return;
@@ -213,24 +238,27 @@ public class SelectMode implements ToolMode {
             if (resizeFreeY) {
                 // Edge-midpoint: TM, BM, oval top, oval bottom.
                 // Only the top/bottom edge moves; left edge and width are fixed.
-                int newY = Math.min(e.getY(), resizeAnchorPoint.y);
-                int newH = Math.abs(e.getY() - resizeAnchorPoint.y);
-                newBounds = new Rectangle(
-                    resizeInitialBounds.x, newY,
-                    resizeInitialBounds.width, newH
+                newBounds = GeomUtils.anchoredVerticalResizeBounds(
+                    resizeAnchorPoint.y, e.getY(),
+                    resizeInitialBounds.x, resizeInitialBounds.width,
+                    BasicObject.MIN_SIZE
                 );
             } else if (resizeFreeX) {
                 // Edge-midpoint: ML, MR, oval left, oval right.
                 // Only the left/right edge moves; top edge and height are fixed.
-                int newX = Math.min(e.getX(), resizeAnchorPoint.x);
-                int newW = Math.abs(e.getX() - resizeAnchorPoint.x);
-                newBounds = new Rectangle(
-                    newX, resizeInitialBounds.y,
-                    newW, resizeInitialBounds.height
+                newBounds = GeomUtils.anchoredHorizontalResizeBounds(
+                    resizeAnchorPoint.x, e.getX(),
+                    resizeInitialBounds.y, resizeInitialBounds.height,
+                    BasicObject.MIN_SIZE
                 );
             } else {
-                // Corner port: both axes are free — standard two-point normalisation.
-                newBounds = GeomUtils.normalizeRect(e.getPoint(), resizeAnchorPoint);
+                // Corner port: both axes are free.  The helper applies the 20 px
+                // minimum before choosing the new origin, preserving the opposite
+                // anchor even when the cursor crosses over it (Use Case F.2/F.3).
+                newBounds = GeomUtils.anchoredResizeBounds(
+                    resizeAnchorPoint, e.getPoint(),
+                    BasicObject.MIN_SIZE, BasicObject.MIN_SIZE
+                );
             }
 
             // resize() applies the new bounds and clamps width/height to ≥ 20 px.
@@ -241,20 +269,27 @@ public class SelectMode implements ToolMode {
 
         // ── MOVING drag (T025 / T043) ─────────────────────────────────────────
         if (state == State.MOVING && moveTarget != null) {
-            // Both BasicObject and CompositeObject expose moveTo(absoluteX, absoluteY).
-            // BasicObject stores its own x/y directly.
-            // CompositeObject computes the delta from its current bbox origin and
-            // propagates it to all children — the call site is identical for both types.
-            if (moveTarget instanceof BasicObject) {
-                ((BasicObject) moveTarget).moveTo(
-                    e.getX() - moveOffset.x,
-                    e.getY() - moveOffset.y
-                );
-            } else if (moveTarget instanceof CompositeObject) {
-                ((CompositeObject) moveTarget).moveTo(
-                    e.getX() - moveOffset.x,
-                    e.getY() - moveOffset.y
-                );
+            if (!moveTargets.isEmpty() && lastMovePoint != null) {
+                int dx = e.getX() - lastMovePoint.x;
+                int dy = e.getY() - lastMovePoint.y;
+                for (GraphicObject target : moveTargets) {
+                    moveObjectBy(target, dx, dy);
+                }
+                lastMovePoint = e.getPoint();
+            } else {
+                // Safety fallback for any legacy path that entered MOVING without
+                // a target snapshot.  Keeps the previous single-object semantics.
+                if (moveTarget instanceof BasicObject) {
+                    ((BasicObject) moveTarget).moveTo(
+                        e.getX() - moveOffset.x,
+                        e.getY() - moveOffset.y
+                    );
+                } else if (moveTarget instanceof CompositeObject) {
+                    ((CompositeObject) moveTarget).moveTo(
+                        e.getX() - moveOffset.x,
+                        e.getY() - moveOffset.y
+                    );
+                }
             }
             canvas.repaint();
             return;
@@ -273,6 +308,12 @@ public class SelectMode implements ToolMode {
     public void onMouseReleased(MouseEvent e, DiagramModel model, CanvasPanel canvas) {
         // MOVING / RESIZING — finalized incrementally during drag; nothing extra on release.
         if (state == State.MOVING || state == State.RESIZING) {
+            if (state == State.MOVING) {
+                moveTargets.clear();
+                lastMovePoint = null;
+                moveTarget = null;
+                moveOffset = null;
+            }
             state = State.IDLE;
             return;
         }
@@ -304,5 +345,19 @@ public class SelectMode implements ToolMode {
     @Override
     public void onMouseMoved(MouseEvent e, DiagramModel model, CanvasPanel canvas) {
         canvas.setHoveredObject(model.getObjectAt(e.getPoint()));
+    }
+
+    /**
+     * Move a top-level object by a cursor delta while preserving polymorphic
+     * movement behavior.  BasicObject updates its own coordinates; CompositeObject
+     * translates all children relative to its bounding-box origin.
+     */
+    private void moveObjectBy(GraphicObject obj, int dx, int dy) {
+        Rectangle bounds = obj.getBoundingBox();
+        if (obj instanceof BasicObject) {
+            ((BasicObject) obj).moveTo(bounds.x + dx, bounds.y + dy);
+        } else if (obj instanceof CompositeObject) {
+            ((CompositeObject) obj).moveTo(bounds.x + dx, bounds.y + dy);
+        }
     }
 }

@@ -57,4 +57,47 @@ public final class GeomUtils {
         int h = Math.abs(p2.y - p1.y);
         return new Rectangle(x, y, w, h);
     }
+
+    /**
+     * Build corner-resize bounds while keeping the opposite corner stable.
+     *
+     * Use Case F.2 allows the dragged port to cross over the opposite anchor;
+     * Use Case F.3 requires a visible minimum size.  The minimum is applied
+     * before choosing the new origin, so when the cursor crosses the anchor the
+     * rectangle grows away from that anchor instead of visually drifting past it.
+     */
+    public static Rectangle anchoredResizeBounds(Point anchor, Point cursor,
+                                                  int minWidth, int minHeight) {
+        int w = Math.max(minWidth, Math.abs(cursor.x - anchor.x));
+        int h = Math.max(minHeight, Math.abs(cursor.y - anchor.y));
+        int x = (cursor.x < anchor.x) ? anchor.x - w : anchor.x;
+        int y = (cursor.y < anchor.y) ? anchor.y - h : anchor.y;
+        return new Rectangle(x, y, w, h);
+    }
+
+    /**
+     * Build horizontal edge-resize bounds with a fixed opposite vertical edge.
+     * The fixed Y/height axis is preserved exactly for oval left/right ports and
+     * rectangle middle-left/middle-right ports.
+     */
+    public static Rectangle anchoredHorizontalResizeBounds(int anchorX, int cursorX,
+                                                            int fixedY, int fixedHeight,
+                                                            int minWidth) {
+        int w = Math.max(minWidth, Math.abs(cursorX - anchorX));
+        int x = (cursorX < anchorX) ? anchorX - w : anchorX;
+        return new Rectangle(x, fixedY, w, fixedHeight);
+    }
+
+    /**
+     * Build vertical edge-resize bounds with a fixed opposite horizontal edge.
+     * The fixed X/width axis is preserved exactly for oval top/bottom ports and
+     * rectangle top-middle/bottom-middle ports.
+     */
+    public static Rectangle anchoredVerticalResizeBounds(int anchorY, int cursorY,
+                                                          int fixedX, int fixedWidth,
+                                                          int minHeight) {
+        int h = Math.max(minHeight, Math.abs(cursorY - anchorY));
+        int y = (cursorY < anchorY) ? anchorY - h : anchorY;
+        return new Rectangle(fixedX, y, fixedWidth, h);
+    }
 }

@@ -20,6 +20,9 @@ import java.util.List;
  */
 public abstract class BasicObject extends GraphicObject {
 
+    /** Minimum visible size required by Use Case F.3 for resize operations. */
+    public static final int MIN_SIZE = 20;
+
     protected int x;
     protected int y;
     protected int width;
@@ -97,8 +100,8 @@ public abstract class BasicObject extends GraphicObject {
     public void resize(Rectangle r) {
         this.x      = r.x;
         this.y      = r.y;
-        this.width  = Math.max(20, r.width);   // minimum 20 px wide
-        this.height = Math.max(20, r.height);  // minimum 20 px tall
+        this.width  = Math.max(MIN_SIZE, r.width);
+        this.height = Math.max(MIN_SIZE, r.height);
     }
 
     // ── Ports (implemented per shape) ─────────────────────────────────────────
